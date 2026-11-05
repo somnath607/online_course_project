@@ -1,0 +1,89 @@
+{% extends 'onlinecourse/base.html' %}
+{% block title %}{{ course.name }} | OnlineCourse{% endblock %}
+{% block content %}
+<div class="row g-5">
+  <div class="col-lg-8">
+    <a class="text-decoration-none" href="{% url 'onlinecourse:index' %}">&larr; All courses</a>
+    <h1 class="display-5 fw-bold mt-3">{{ course.name }}</h1>
+    <p class="lead text-secondary">{{ course.description }}</p>
+
+    <div class="d-flex gap-3 flex-wrap mb-5">
+      <span class="badge rounded-pill text-bg-light p-2">Published {{ course.pub_date|date:"M d, Y" }}</span>
+      <span class="badge rounded-pill text-bg-light p-2">{{ course.lesson_set.count }} lessons</span>
+      <span class="badge rounded-pill text-bg-light p-2">{{ course.question_set.count }} exam questions</span>
+    </div>
+
+    <h2 class="h3 mb-3">Course lessons</h2>
+    <div class="accordion mb-5" id="lessonAccordion">
+      {% for lesson in course.lesson_set.all %}
+      <div class="accordion-item">
+        <h3 class="accordion-header">
+          <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#lesson{{ lesson.id }}">
+            Lesson {{ forloop.counter }}: {{ lesson.title }}
+          </button>
+        </h3>
+        <div id="lesson{{ lesson.id }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" data-bs-parent="#lessonAccordion">
+          <div class="accordion-body lesson-content">{{ lesson.content|linebreaks }}</div>
+        </div>
+      </div>
+      {% empty %}
+      <p>No lessons have been added.</p>
+      {% endfor %}
+    </div>
+
+    {% if is_enrolled %}
+    <section class="exam-panel rounded-4 p-4 p-md-5 shadow-sm" id="exam">
+      <div class="d-flex justify-content-between gap-3 align-items-start mb-4">
+        <div>
+          <div class="text-primary fw-semibold small text-uppercase">Final assessment</div>
+          <h2 class="h3 mb-1">Mock exam</h2>
+          <p class="text-secondary mb-0">A score of 80% or higher is required to pass.</p>
+        </div>
+        <span class="badge text-bg-primary">{{ course.question_set.count }} questions</span>
+      </div>
+      <form action="{% url 'onlinecourse:submit' course.id %}" method="post">
+        {% csrf_token %}
+        {% for question in course.question_set.all %}
+        <fieldset class="question-block border rounded-3 p-4 mb-3">
+          <legend class="fs-5 fw-semibold">{{ forloop.counter }}. {{ question.text }}</legend>
+          <div class="small text-secondary mb-3">{{ question.grade|floatformat:0 }} points</div>
+          {% for choice in question.choice_set.all %}
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="choice_{{ choice.id }}" value="{{ choice.id }}" id="choice{{ choice.id }}">
+            <label class="form-check-label" for="choice{{ choice.id }}">{{ choice.text }}</label>
+          </div>
+          {% endfor %}
+        </fieldset>
+        {% endfor %}
+        <button class="btn btn-success btn-lg" type="submit">Submit exam</button>
+      </form>
+    </section>
+    {% elif user.is_authenticated %}
+      <div class="alert alert-info p-4">
+        Enroll in the course to unlock the assessment.
+        <a class="btn btn-primary ms-2" href="{% url 'onlinecourse:enroll' course.id %}">Enroll now</a>
+      </div>
+    {% else %}
+      <div class="alert alert-info p-4">
+        Please <a href="{% url 'onlinecourse:login' %}?next={{ request.path }}">log in</a> and enroll to take the assessment.
+      </div>
+    {% endif %}
+  </div>
+
+  <aside class="col-lg-4">
+    <div class="card border-0 shadow-sm sticky-lg-top" style="top: 1.5rem;">
+      {% if course.image %}<img src="{{ course.image.url }}" class="card-img-top" alt="{{ course.name }}">{% endif %}
+      <div class="card-body p-4">
+        <h2 class="h5">What you will practice</h2>
+        <ul class="text-secondary ps-3 mb-0">
+          <li>Django models and relationships</li>
+          <li>Admin inlines</li>
+          <li>Views, URLs, and redirects</li>
+          <li>Templates and Bootstrap</li>
+          <li>Exam scoring logic</li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}
